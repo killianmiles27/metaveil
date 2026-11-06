@@ -1,0 +1,34 @@
+{
+ "main": [
+  {
+   "tool": "powershell",
+   "args": {
+    "command": "Test-Path \"C:\\Users\\devuser\\AppData\\Local\\Programs\\orca\\resources\\bin\\orca.exe\"",
+    "description": "test orca exe readable"
+   }
+  },
+  {
+   "tool": "powershell",
+   "args": {
+    "command": "Get-ChildItem \"C:\\Users\\devuser\\AppData\\Local\\Programs\\orca\\resources\\bin\" | Select-Object -ExpandProperty Name",
+    "description": "list orca bin names"
+   }
+  },
+  {
+   "tool": "powershell",
+   "args": {
+    "command": "& \"C:\\Users\\devuser\\AppData\\Local\\Programs\\orca\\resources\\bin\\orca.exe\" --version",
+    "description": "orca exe version"
+   }
+  },
+  {
+   "tool": "powershell",
+   "args": {
+    "command": "& \"C:\\Users\\devuser\\AppData\\Local\\Programs\\orca\\resources\\bin\\orca.cmd\" --version",
+    "description": "orca cmd version"
+   }
+  }
+ ],
+ "child": [],
+ "final": "DONE"
+}

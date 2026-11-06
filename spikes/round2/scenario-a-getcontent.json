@@ -1,0 +1,1 @@
+{"main":[{"tool":"powershell","args":{"command":"Get-Content C:/Users/devuser/metaveil-canary-a/secret.txt","description":"read denied canary"}}],"child":[],"final":"DONE"}

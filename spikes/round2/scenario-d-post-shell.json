@@ -1,0 +1,13 @@
+{
+ "main": [
+  {
+   "tool": "powershell",
+   "args": {
+    "command": "Get-Content \"C:\\Users\\devuser\\metaveil-canary-b\\secret.txt\"",
+    "description": "control read for post block"
+   }
+  }
+ ],
+ "child": [],
+ "final": "DONE"
+}

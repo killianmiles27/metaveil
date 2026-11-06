@@ -1,0 +1,12 @@
+{
+  "schema_version": 1,
+  "default_profile": "spike-deny-home",
+  "profiles": {
+    "spike-deny-home": {
+      "extends": ":auto-review",
+      "filesystem": {
+        "~/": "deny"
+      }
+    }
+  }
+}

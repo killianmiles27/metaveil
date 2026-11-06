@@ -1,0 +1,13 @@
+{
+ "main": [
+  {
+   "tool": "powershell",
+   "args": {
+    "command": "Remove-Item -Recurse -Force C:/Users/devuser/metaveil-spike-ws/delete-me",
+    "description": "destructive workspace canary"
+   }
+  }
+ ],
+ "child": [],
+ "final": "DONE"
+}

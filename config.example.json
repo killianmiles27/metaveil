@@ -1,0 +1,102 @@
+{
+  "port": 8787,
+  "upstream": "https://api.meta.ai",
+  "homeDir": "C:\\Users\\sampleuser",
+  "homeAlias": "C:\\Users\\dev",
+  "workspaceRoot": "C:\\Users\\sampleuser\\projects\\metaveil",
+  "workspaceAlias": "C:\\Users\\dev\\workspace",
+  "mapPath": "metaveil.map.json",
+  "auditPath": "metaveil.audit.jsonl",
+  "maxBodyBytes": 67108864,
+  "detectorFailure": "withhold",
+  "identity": {
+    "names": [
+      "Avery Quill"
+    ],
+    "usernames": [
+      "sampleuser"
+    ],
+    "emails": [
+      "avery.quill@example.test"
+    ],
+    "hostnames": [
+      "sampleuser-laptop"
+    ],
+    "terms": [
+      "Bluefin Cipher"
+    ]
+  },
+  "contributorPolicy": {
+    "allowedTools": [
+      "read_file",
+      "search",
+      "write_file",
+      "edit_file",
+      "powershell",
+      "write_todos",
+      "subagent_*",
+      "work_*",
+      "monitor",
+      "workflow",
+      "read_skill"
+    ],
+    "deniedSkillPatterns": [
+      "computer-use",
+      "orca-computer-use",
+      "built-in-browser",
+      "chrome-browser",
+      "claude-in-chrome",
+      "browser",
+      "gmail",
+      "drive",
+      "calendar",
+      "password",
+      "credential"
+    ],
+    "deniedCommandPatterns": [
+      "orca computer",
+      "orca-computer-use",
+      "screenshot",
+      "CopyFromScreen",
+      "Get-Clipboard",
+      "cmdkey",
+      "reg query",
+      "gh auth token",
+      "printenv",
+      "Get-ChildItem Env:"
+    ],
+    "allowedRoots": [],
+    "fileTools": [
+      "read_file",
+      "search",
+      "write_file",
+      "edit_file",
+      "read",
+      "write",
+      "edit",
+      "glob",
+      "grep",
+      "list_files",
+      "read_multiple_files",
+      "subagent_*",
+      "work_*",
+      "*file*"
+    ],
+    "allowedSkills": [],
+    "bundledSkills": [],
+    "sandboxLinePattern": "^\\s*[-*]?\\s*Shell sandbox:\\s*on\\.\\s*$"
+  },
+  "jev": {
+    "enabled": false,
+    "baseUrl": "https://openrouter.ai",
+    "model": "typesafe/jev-1.14",
+    "apiKeyEnv": "OPENROUTER_API_KEY",
+    "timeoutMs": 15000,
+    "cachePath": "metaveil.jev-cache.json",
+    "concurrency": 4,
+    "chunkChars": 8000,
+    "overlapChars": 200,
+    "threshold": 0.5,
+    "maxCallsPerChunk": 32
+  }
+}

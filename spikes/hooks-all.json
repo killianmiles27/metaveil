@@ -1,0 +1,112 @@
+{
+  "SessionStart": [
+    {
+      "hooks": [
+        {
+          "type": "command",
+          "command": "C:/PROGRA~1/nodejs/node.exe C:/Users/devuser/orca/metaveil/spikes/hook-capture.cjs"
+        }
+      ]
+    }
+  ],
+  "UserPromptSubmit": [
+    {
+      "hooks": [
+        {
+          "type": "command",
+          "command": "C:/PROGRA~1/nodejs/node.exe C:/Users/devuser/orca/metaveil/spikes/hook-capture.cjs"
+        }
+      ]
+    }
+  ],
+  "PreToolUse": [
+    {
+      "hooks": [
+        {
+          "type": "command",
+          "command": "C:/PROGRA~1/nodejs/node.exe C:/Users/devuser/orca/metaveil/spikes/hook-capture.cjs"
+        }
+      ]
+    }
+  ],
+  "PostToolUse": [
+    {
+      "hooks": [
+        {
+          "type": "command",
+          "command": "C:/PROGRA~1/nodejs/node.exe C:/Users/devuser/orca/metaveil/spikes/hook-capture.cjs"
+        }
+      ]
+    }
+  ],
+  "PostToolBatch": [
+    {
+      "hooks": [
+        {
+          "type": "command",
+          "command": "C:/PROGRA~1/nodejs/node.exe C:/Users/devuser/orca/metaveil/spikes/hook-capture.cjs"
+        }
+      ]
+    }
+  ],
+  "PreLLMCall": [
+    {
+      "hooks": [
+        {
+          "type": "command",
+          "command": "C:/PROGRA~1/nodejs/node.exe C:/Users/devuser/orca/metaveil/spikes/hook-capture.cjs"
+        }
+      ]
+    }
+  ],
+  "PostLLMCall": [
+    {
+      "hooks": [
+        {
+          "type": "command",
+          "command": "C:/PROGRA~1/nodejs/node.exe C:/Users/devuser/orca/metaveil/spikes/hook-capture.cjs"
+        }
+      ]
+    }
+  ],
+  "SubagentStart": [
+    {
+      "hooks": [
+        {
+          "type": "command",
+          "command": "C:/PROGRA~1/nodejs/node.exe C:/Users/devuser/orca/metaveil/spikes/hook-capture.cjs"
+        }
+      ]
+    }
+  ],
+  "SubagentStop": [
+    {
+      "hooks": [
+        {
+          "type": "command",
+          "command": "C:/PROGRA~1/nodejs/node.exe C:/Users/devuser/orca/metaveil/spikes/hook-capture.cjs"
+        }
+      ]
+    }
+  ],
+  "Stop": [
+    {
+      "hooks": [
+        {
+          "type": "command",
+          "command": "C:/PROGRA~1/nodejs/node.exe C:/Users/devuser/orca/metaveil/spikes/hook-capture.cjs"
+        }
+      ]
+    }
+  ],
+  "SessionEnd": [
+    {
+      "hooks": [
+        {
+          "type": "command",
+          "command": "C:/PROGRA~1/nodejs/node.exe C:/Users/devuser/orca/metaveil/spikes/hook-capture.cjs"
+        }
+      ]
+    }
+  ]
+}

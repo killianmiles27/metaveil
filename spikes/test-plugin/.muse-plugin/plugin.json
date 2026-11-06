@@ -1,0 +1,21 @@
+{
+  "schemaVersion": 1,
+  "name": "spike-hooks",
+  "version": "0.0.1",
+  "description": "Spike hook probe",
+  "compat": {
+    "manifestDir": ".muse-plugin"
+  },
+  "capabilities": {
+    "hooks": [
+      {
+        "id": "pre-llm",
+        "event": "PreLLMCall",
+        "command": [
+          "node",
+          "hooks/pre-llm.cjs"
+        ]
+      }
+    ]
+  }
+}

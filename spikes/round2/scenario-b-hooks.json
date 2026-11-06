@@ -1,0 +1,64 @@
+{
+ "main": [
+  {
+   "tool": "read_file",
+   "args": {
+    "path": "C:\\Users\\devuser\\metaveil-canary-a\\secret.txt"
+   }
+  },
+  {
+   "tool": "search",
+   "args": {
+    "pattern": "CANARY",
+    "paths": [
+     "C:\\Users\\devuser\\metaveil-canary-a"
+    ],
+    "mode": "literal"
+   }
+  },
+  {
+   "tool": "write_file",
+   "args": {
+    "path": "C:\\Users\\devuser\\metaveil-canary-a\\written.txt",
+    "content": "HOOK-WRITE"
+   }
+  },
+  {
+   "tool": "edit_file",
+   "args": {
+    "path": "C:\\Users\\devuser\\metaveil-canary-a\\secret.txt",
+    "find": "CANARY-A-1111",
+    "replace": "CHANGED"
+   }
+  },
+  {
+   "tool": "read_skill",
+   "args": {
+    "name": "orca-computer-use"
+   }
+  },
+  {
+   "tool": "read_file",
+   "args": {
+    "path": "C:\\Users\\devuser\\metaveil-spike-ws\\README.txt"
+   }
+  },
+  {
+   "tool": "subagent_spawn",
+   "args": {
+    "command_id": "cmd-child-hook",
+    "role": "tester",
+    "objective": "Use read_file on C:/Users/devuser/metaveil-canary-a/secret.txt and report the exact result. CHILD-HOOK"
+   }
+  }
+ ],
+ "child": [
+  {
+   "tool": "read_file",
+   "args": {
+    "path": "C:\\Users\\devuser\\metaveil-canary-a\\secret.txt"
+   }
+  }
+ ],
+ "final": "DONE"
+}
