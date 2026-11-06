@@ -1,0 +1,13 @@
+{
+ "main": [
+  {
+   "tool": "powershell",
+   "args": {
+    "command": "Write-Output TOOL-C-ALLOWED",
+    "description": "hook failure mode test"
+   }
+  }
+ ],
+ "child": [],
+ "final": "DONE"
+}

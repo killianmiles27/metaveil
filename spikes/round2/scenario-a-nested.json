@@ -1,0 +1,69 @@
+{
+ "main": [
+  {
+   "tool": "powershell",
+   "args": {
+    "command": "Get-Content \"C:\\Users\\devuser\\metaveil-canary-a\\late2.txt\"",
+    "description": "late2 Get-Content"
+   }
+  },
+  {
+   "tool": "powershell",
+   "args": {
+    "command": "cmd /c type \"C:\\Users\\devuser\\metaveil-canary-a\\secret.txt\"",
+    "description": "cmd type backslash"
+   }
+  },
+  {
+   "tool": "powershell",
+   "args": {
+    "command": "Get-Content \"C:\\Users\\devuser\\metaveil-canary-nested\\allowed\blocked\\secret.txt\"",
+    "description": "nested blocked Get-Content"
+   }
+  },
+  {
+   "tool": "powershell",
+   "args": {
+    "command": "Get-Content \"C:\\Users\\devuser\\metaveil-canary-nested\\allowed\\secret.txt\"",
+    "description": "nested allowed Get-Content"
+   }
+  },
+  {
+   "tool": "read_file",
+   "args": {
+    "path": "C:\\Users\\devuser\\metaveil-canary-a\\late2.txt"
+   }
+  },
+  {
+   "tool": "search",
+   "args": {
+    "pattern": "CANARY",
+    "paths": [
+     "C:\\Users\\devuser\\metaveil-canary-nested\\allowed"
+    ],
+    "mode": "literal"
+   }
+  },
+  {
+   "tool": "read_file",
+   "args": {
+    "path": "C:\\Users\\devuser\\metaveil-canary-nested\\allowed\\secret.txt"
+   }
+  },
+  {
+   "tool": "read_file",
+   "args": {
+    "path": "C:\\Users\\devuser\\metaveil-canary-b\\secret.txt"
+   }
+  },
+  {
+   "tool": "powershell",
+   "args": {
+    "command": "Get-Content \"C:\\Users\\devuser\\metaveil-canary-b\\secret.txt\"",
+    "description": "control Get-Content"
+   }
+  }
+ ],
+ "child": [],
+ "final": "DONE"
+}

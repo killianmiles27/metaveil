@@ -1,0 +1,13 @@
+{
+ "main": [
+  {
+   "tool": "powershell",
+   "args": {
+    "command": "Remove-Item -Path C:\\Users\\devuser\\metaveil-canary-c\\secret.txt -WhatIf",
+    "description": "dangerous-but-WhatIf test"
+   }
+  }
+ ],
+ "child": [],
+ "final": "DONE"
+}

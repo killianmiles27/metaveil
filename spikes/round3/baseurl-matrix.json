@@ -1,0 +1,93 @@
+[
+  {
+    "case": "profile-no-flags",
+    "with_profile": true,
+    "flags": [],
+    "exit": 0,
+    "requests": [
+      [
+        "GET",
+        "/muse-code/models"
+      ]
+    ],
+    "hit_fake_get": true,
+    "hit_fake_post": false,
+    "meta_auth_error": false,
+    "tail": "Hi \u00e2\u20ac\u201d how can I help?\nmuse: workspace root: C:\\Users\\devuser\\orca\\metaveil (cwd default)\nmuse: Agent delegation: auto unavailable: workspace is untrusted."
+  },
+  {
+    "case": "profile-model-flag",
+    "with_profile": true,
+    "flags": [
+      "--model",
+      "muse-spark-1.3"
+    ],
+    "exit": 0,
+    "requests": [
+      [
+        "GET",
+        "/muse-code/models"
+      ]
+    ],
+    "hit_fake_get": true,
+    "hit_fake_post": false,
+    "meta_auth_error": false,
+    "tail": "Hi \u00e2\u20ac\u201d how can I help?\nmuse: workspace root: C:\\Users\\devuser\\orca\\metaveil (cwd default)\nmuse: Agent delegation: auto unavailable: workspace is untrusted."
+  },
+  {
+    "case": "profile-provider-model-flags",
+    "with_profile": true,
+    "flags": [
+      "--provider",
+      "meta",
+      "--model",
+      "muse-spark-1.3"
+    ],
+    "exit": 0,
+    "requests": [
+      [
+        "GET",
+        "/muse-code/models"
+      ]
+    ],
+    "hit_fake_get": true,
+    "hit_fake_post": false,
+    "meta_auth_error": false,
+    "tail": "Hello! How can I help you today?\nmuse: workspace root: C:\\Users\\devuser\\orca\\metaveil (cwd default)\nmuse: Agent delegation: auto unavailable: workspace is untrusted."
+  },
+  {
+    "case": "no-profile-no-flags",
+    "with_profile": false,
+    "flags": [],
+    "exit": 0,
+    "requests": [
+      [
+        "GET",
+        "/muse-code/models"
+      ]
+    ],
+    "hit_fake_get": true,
+    "hit_fake_post": false,
+    "meta_auth_error": false,
+    "tail": "Hello! How can I help you today?\nmuse: workspace root: C:\\Users\\devuser\\orca\\metaveil (cwd default)\nmuse: Agent delegation: auto unavailable: workspace is untrusted."
+  },
+  {
+    "case": "profile-baseurl-flag",
+    "with_profile": true,
+    "flags": [
+      "--base-url",
+      "LOOPBACK"
+    ],
+    "exit": 0,
+    "requests": [
+      [
+        "GET",
+        "/muse-code/models"
+      ]
+    ],
+    "hit_fake_get": true,
+    "hit_fake_post": false,
+    "meta_auth_error": false,
+    "tail": "Hello! How can I help you today?\nmuse: workspace root: C:\\Users\\devuser\\orca\\metaveil (cwd default)\nmuse: Agent delegation: auto unavailable: workspace is untrusted."
+  }
+]

@@ -1,0 +1,22 @@
+{
+  "PreToolUse": [
+    {
+      "hooks": [
+        {
+          "type": "command",
+          "command": "C:/PROGRA~1/nodejs/node.exe C:/Users/devuser/orca/metaveil/spikes/hooks/deny-tools.cjs"
+        }
+      ]
+    }
+  ],
+  "PostToolUse": [
+    {
+      "hooks": [
+        {
+          "type": "command",
+          "command": "C:/PROGRA~1/nodejs/node.exe C:/Users/devuser/orca/metaveil/spikes/hook-capture.cjs"
+        }
+      ]
+    }
+  ]
+}

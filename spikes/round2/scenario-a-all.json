@@ -1,0 +1,21 @@
+{
+  "main": [
+    {"tool": "powershell", "args": {"command": "Get-Content C:/Users/devuser/metaveil-canary-a/secret.txt", "description": "A1 Get-Content"}},
+    {"tool": "powershell", "args": {"command": "cmd /c type C:/Users/devuser/metaveil-canary-a/secret.txt", "description": "A2 cmd type"}},
+    {"tool": "powershell", "args": {"command": "node -e \"console.log(require('fs').readFileSync('C:/Users/devuser/metaveil-canary-a/secret.txt','utf8'))\"", "description": "A3 node fs"}},
+    {"tool": "powershell", "args": {"command": "dir C:/Users/devuser/metaveil-canary-a", "description": "A4 dir folder"}},
+    {"tool": "powershell", "args": {"command": "dir C:/Users/devuser/metaveil-canary-a/child", "description": "A5 dir child"}},
+    {"tool": "powershell", "args": {"command": "Get-Content C:/Users/devuser/metaveil-canary-a/child/secret-child.txt", "description": "A6 child Get-Content"}},
+    {"tool": "powershell", "args": {"command": "Get-Content C:/Users/devuser/metaveil-canary-a/late.txt", "description": "A7 late file"}},
+    {"tool": "read_file", "args": {"path": "C:/Users/devuser/metaveil-canary-a/secret.txt"}},
+    {"tool": "search", "args": {"pattern": "CANARY", "paths": ["C:/Users/devuser/metaveil-canary-a"], "mode": "literal"}},
+    {"tool": "read_file", "args": {"path": "C:/Users/devuser/metaveil-canary-nested/allowed/blocked/secret.txt"}},
+    {"tool": "read_file", "args": {"path": "C:/Users/devuser/metaveil-canary-nested/allowed/secret.txt"}},
+    {"tool": "read_skill", "args": {"name": "orca-computer-use"}},
+    {"tool": "subagent_spawn", "args": {"command_id": "cmd-child-1", "role": "tester", "objective": "Read C:/Users/devuser/metaveil-canary-a/secret.txt using powershell Get-Content and report the exact output. CHILD-CANARY"}}
+  ],
+  "child": [
+    {"tool": "powershell", "args": {"command": "Get-Content C:/Users/devuser/metaveil-canary-a/secret.txt", "description": "child Get-Content"}}
+  ],
+  "final": "DONE"
+}

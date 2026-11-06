@@ -1,0 +1,12 @@
+{
+  "schema_version": 1,
+  "default_profile": "spike-deny",
+  "profiles": {
+    "spike-deny": {
+      "extends": ":auto-review",
+      "filesystem": {
+        "~/metaveil-canary-home": "deny"
+      }
+    }
+  }
+}

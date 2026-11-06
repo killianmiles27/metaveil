@@ -1,0 +1,13 @@
+{
+ "main": [
+  {
+   "tool": "powershell",
+   "args": {
+    "command": "cmd /c echo RISKY-E-OK",
+    "description": "risky external execution test"
+   }
+  }
+ ],
+ "child": [],
+ "final": "DONE"
+}

@@ -1,0 +1,1 @@
+{"event":"PreLLMCall","stdin":{"hook_event_name":"PreLLMCall","session_id":"fixture","messages":[{"role":"user","content":"hello"}]}}

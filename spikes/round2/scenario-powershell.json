@@ -1,0 +1,1 @@
+{"main":[{"tool":"powershell","args":{"command":"Write-Output TOOL-OK","description":"test"}}],"child":[],"final":"DONE"}
