@@ -1,0 +1,17 @@
+node_modules/
+config.json
+map.json
+*.map.json
+*.jsonl
+*.tmp
+.metaveil-data/
+.env
+.env.*
+!config.example.json
+
+spikes/capture/
+spikes/muse-home/
+*.jev-cache.json
+jev-cache.json
+.e2e-*/
+*.log
