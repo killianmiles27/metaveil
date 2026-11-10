@@ -219,3 +219,32 @@ test('hook internal watchdog prints a deny before Muse can fail open', async () 
     fs.rmSync(dir, { recursive: true, force: true });
   }
 });
+
+test('desktop refusal explains coding can continue without a bypass', () => {
+  const { dir, file } = tempConfig();
+  try {
+    const out = runHook({ tool_name: 'read_file', cwd: 'C:/work/ws', tool_input: { path: '.metaveil-blocked/desktop' } }, file);
+    assert.equal(decision(out), 'deny');
+    const reason = out.hookSpecificOutput.permissionDecisionReason;
+    assert.match(reason, /privacy refusal, not a shell failure/);
+    assert.match(reason, /project edits, builds and tests remain available/);
+    assert.match(reason, /Do not retry/);
+    assert.match(reason, /unverified/);
+  } finally {
+    fs.rmSync(dir, { recursive: true, force: true });
+  }
+});
+
+test('all refusal categories explain their boundary without implying broken shell tools', () => {
+  const {dir,file}=tempConfig();
+  try {
+    for (const category of ['path','tool','skill','command','desktop']) {
+      const out=runHook({tool_name:'read_file',cwd:'C:/work/ws',tool_input:{path:'.metaveil-blocked/'+category}},file);
+      assert.equal(decision(out),'deny');
+      assert.match(out.hookSpecificOutput.permissionDecisionReason,/not a shell failure|not a file or a shell failure/);
+    }
+    for (const marker of ['./.metaveil-blocked/path/detail','.METAVEIL-BLOCKED/TOOL']) {
+      assert.equal(decision(runHook({tool_name:'read_file',cwd:'C:/work/ws',tool_input:{path:marker}},file)),'deny');
+    }
+  } finally {fs.rmSync(dir,{recursive:true,force:true});}
+});

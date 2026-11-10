@@ -186,3 +186,25 @@ test('no original call detail survives in a blocked stream, including the comple
     if (item.type === 'function_call') assert.equal(JSON.parse(item.arguments).path, '.metaveil-blocked/path');
   }
 });
+
+test('desktop refusal uses a specific safe marker at every argument split', async (t) => {
+  const args = JSON.stringify({ command: 'orca computer screenshot --window private-title' });
+  const fake = await startFakeUpstream(async (req, res, record) => {
+    res.writeHead(200, { 'content-type': 'text/event-stream' });
+    res.end(responseForCall({ split: record.index % (args.length + 1), args, toolName: 'powershell' }));
+  });
+  t.after(() => fake.close());
+  const { config } = makeRuntimeConfig({ upstream: fake.url });
+  const proxy = await startProxy(config);
+  t.after(() => proxy.stop());
+  for (let split = 0; split <= args.length; split++) {
+    const response = await postResponses(proxy.url, {
+      model: 'muse-code-test', input: [], instructions: contributorPreamble(), stream: true,
+    });
+    assert.equal(response.status, 200);
+    assert.match(response.body, /\.metaveil-blocked\/desktop/);
+    assert.ok(!response.body.includes('private-title'));
+    assert.ok(!response.body.includes('orca computer'));
+    assert.ok(!response.body.includes('event: error'));
+  }
+});
