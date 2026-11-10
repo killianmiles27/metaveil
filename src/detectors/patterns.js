@@ -88,10 +88,16 @@ function tokenPatternDetector() {
     name: 'token-patterns',
     scan(text) {
       const spans = [];
+      // Tool output can be embedded as JSON inside a larger developer message,
+      // rather than be a standalone JSON value the redactor can parse. The n
+      // in a literal \\n must not hide a following token from its left boundary.
+      // Equal-length masking preserves original offsets and token values.
+      const boundaryText = text.replace(/\\+(?:[nrtbfv]|u(?:000[89a-f]|0020))/gi,
+        match => ' '.repeat(match.length));
       const re = /(?<![A-Za-z0-9_])(?:sk-[A-Za-z0-9_-]{16,}|ghp_[A-Za-z0-9]{20,}|github_pat_[A-Za-z0-9_]{20,}|AKIA[0-9A-Z]{16}|xox[baprs]-[A-Za-z0-9-]{10,}|glpat-[A-Za-z0-9_-]{16,}|npm_[A-Za-z0-9]{16,}|hf_[A-Za-z0-9]{16,})(?![A-Za-z0-9_])/g;
-      collect(text, re, spans);
+      collect(boundaryText, re, spans);
       const jwt = /(?<![A-Za-z0-9_-])eyJ[A-Za-z0-9_-]{8,}\.[A-Za-z0-9_-]{8,}\.[A-Za-z0-9_-]{8,}(?![A-Za-z0-9_-])/g;
-      collect(text, jwt, spans);
+      collect(boundaryText, jwt, spans);
       return spans;
     },
   };

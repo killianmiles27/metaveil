@@ -38,7 +38,8 @@
       "work_*",
       "monitor",
       "workflow",
-      "read_skill"
+      "read_skill",
+      "submit_approval_assessment"
     ],
     "deniedSkillPatterns": [
       "computer-use",

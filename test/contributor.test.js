@@ -191,3 +191,24 @@ test('web_fetch only reaches public http(s) addresses', () => {
   ]) assert.equal(ok(url), false, url);
   assert.equal(isPublicWebArgs('{}'), false);
 });
+
+test('Muse approval judge verdicts survive request filtering and response enforcement', async (t) => {
+  const args = JSON.stringify({ decision: 'allow', rationale: 'Sandboxed project test run' });
+  const { fake, proxy } = await setup(t, async (req, res) => {
+    res.writeHead(200, { 'content-type': 'application/json' });
+    res.end(JSON.stringify({ output: [{ type: 'function_call', name: 'submit_approval_assessment', arguments: args }] }));
+  });
+  const response = await postResponses(proxy.url, {
+    model: 'muse-code-test', instructions: contributorPreamble(), input: [], stream: false,
+    tools: [{ type: 'function', name: 'submit_approval_assessment', parameters: { type: 'object' } },
+      { type: 'function', name: 'computer_use', parameters: { type: 'object' } }],
+  });
+  assert.equal(response.status, 200);
+  assert.equal(JSON.parse(response.body).output[0].arguments, args);
+  const forwarded = JSON.parse(fake.requests[0].body.toString('utf8'));
+  assert.deepEqual(forwarded.tools.map(tool => tool.name), ['submit_approval_assessment']);
+  const policy = normalizeConfig({ homeDir: 'C:/Users/example' }).contributorPolicy;
+  assert.equal(evaluateFunctionCall({ name: 'muse.submit_approval_assessment', argumentsText: args }, policy).allowed, true);
+  assert.equal(evaluateFunctionCall({ name: 'submit_approval_assessment_extra', argumentsText: args }, policy).allowed, false);
+  assert.equal(evaluateFunctionCall({ name: 'powershell', argumentsText: JSON.stringify({ command: 'orca computer screenshot' }) }, policy).allowed, false);
+});

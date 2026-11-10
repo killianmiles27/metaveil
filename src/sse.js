@@ -109,20 +109,24 @@ function functionArgsKey(obj) {
 const STAND_IN_TOOL = 'read_file';
 
 function standInArguments(verdict) {
+  // Only fixed policy labels reach the client, never the rejected arguments.
+  if (verdict?.reason === 'command' && ['orca computer', 'orca-computer-use', 'screenshot', 'CopyFromScreen'].includes(verdict.pattern)) {
+    return JSON.stringify({ path: '.metaveil-blocked/desktop' });
+  }
   const reason = /^[a-z-]+$/.test(String(verdict?.reason)) ? verdict.reason : 'tool';
   return JSON.stringify({ path: `.metaveil-blocked/${reason}` });
 }
 
-function standInEvent(obj, args) {
+function standInEvent(obj, args, name = STAND_IN_TOOL) {
   if (obj.type === 'response.function_call_arguments.delta') return { ...obj, delta: args };
   if (obj.type === 'response.function_call_arguments.done') {
-    return { ...obj, arguments: args, ...(obj.name ? { name: STAND_IN_TOOL } : {}) };
+    return { ...obj, arguments: args, ...(obj.name ? { name } : {}) };
   }
   return {
     ...obj,
     item: {
       ...obj.item,
-      name: STAND_IN_TOOL,
+      name,
       arguments: obj.type === 'response.output_item.added' ? '' : args,
     },
   };
@@ -137,6 +141,7 @@ export class SseTransformer {
     this.calls = new Map();
     this.releasedCalls = new Set();
     this.neutralizedCalls = new Map();
+    this.canonicalCalls = new Map();
     this.terminated = false;
     this.errorText = null;
   }
@@ -413,7 +418,8 @@ export class SseTransformer {
     // Its stand-in delta already went out.
     if (this.neutralizedCalls.has(key)) return '';
     if (this.releasedCalls.has(key)) {
-      return this.serializeEvents(this.restoreEvent(obj, originalEvent));
+      // A completed call must never gain unvalidated trailing arguments.
+      return '';
     }
     const call = this.getCall(key, obj.output_index);
     if (typeof obj.name === 'string' && obj.name) call.name = call.name || obj.name;
@@ -428,14 +434,17 @@ export class SseTransformer {
       return serializeSseEvent(envelope(originalEvent, standInEvent(obj, this.neutralizedCalls.get(key))));
     }
     if (this.releasedCalls.has(key)) {
-      return this.serializeEvents(this.restoreEvent(obj, originalEvent));
+      const canonical = this.canonicalCalls.get(key);
+      return this.serializeEvents(this.restoreEvent(standInEvent(obj, canonical.args, canonical.name), originalEvent));
     }
     const call = this.getCall(key, obj.output_index);
     if (typeof obj.name === 'string' && obj.name) call.name = call.name || obj.name;
     if (typeof obj.arguments === 'string') call.args = obj.arguments;
     call.events.push({ obj, originalEvent });
     call.complete = true;
-    return this.finalizeCall(call).text;
+    // Muse compares this string with output_item.done. Hold both until the
+    // final item (or response.completed) supplies the authoritative arguments.
+    return '';
   }
 
   handleCallItem(obj, originalEvent, type) {
@@ -445,9 +454,11 @@ export class SseTransformer {
       return serializeSseEvent(envelope(originalEvent, standInEvent(obj, this.neutralizedCalls.get(key))));
     }
     if (this.releasedCalls.has(key)) {
-      return this.serializeEvents(this.restoreEvent(obj, originalEvent));
+      const canonical = this.canonicalCalls.get(key);
+      return this.serializeEvents(this.restoreEvent(standInEvent(obj, canonical.args, canonical.name), originalEvent));
     }
     const call = this.getCall(key, obj.output_index);
+    if (typeof item.call_id === 'string') call.callId = item.call_id;
     if (typeof item.name === 'string' && item.name) call.name = call.name || item.name;
     call.events.push({ obj, originalEvent });
     if (type === 'response.output_item.done' || item.status === 'completed') {
@@ -497,6 +508,7 @@ export class SseTransformer {
     const args = standInArguments(verdict);
     this.calls.delete(call.key);
     this.neutralizedCalls.set(call.key, args);
+    if (call.callId) this.neutralizedCalls.set(`call:${call.callId}`, args);
     let text = '';
     let sentDelta = false;
     for (const { obj, originalEvent } of call.events) {
@@ -513,11 +525,22 @@ export class SseTransformer {
     const verdict = this.evaluateCall(call);
     if (!verdict.allowed) return this.neutralize(call, verdict);
     let text = '';
+    let sentDelta = false;
+    const args = this.restorer.restoreText(call.args, { argsContext: true });
+    const name = this.restorer.restoreText(call.name, { argsContext: false });
     for (const buffered of call.events) {
-      text += this.serializeEvents(this.restoreEvent(buffered.obj, buffered.originalEvent));
+      if (buffered.obj.type === 'response.function_call_arguments.delta') {
+        if (sentDelta) continue;
+        sentDelta = true;
+      }
+      const restored = restoreResponseObject(buffered.obj, this.restorer);
+      text += serializeSseEvent(envelope(buffered.originalEvent, standInEvent(restored, args, name)));
     }
     this.calls.delete(call.key);
     this.releasedCalls.add(call.key);
+    const canonical = { name: call.name, args: call.args };
+    this.canonicalCalls.set(call.key, canonical);
+    if (call.callId) this.canonicalCalls.set(`call:${call.callId}`, canonical);
     return { blocked: false, text };
   }
 
@@ -579,8 +602,10 @@ export class SseTransformer {
     }
     const safeOutputs = outputs.map((item) => {
       if (!isObject(item) || item.type !== 'function_call') return item;
-      const known = this.neutralizedCalls.get(String(item.id));
+      const known = this.neutralizedCalls.get(String(item.id)) || this.neutralizedCalls.get(`call:${item.call_id}`);
       if (known) return { ...item, name: STAND_IN_TOOL, arguments: known };
+      const canonical = this.canonicalCalls.get(String(item.id)) || this.canonicalCalls.get(`call:${item.call_id}`);
+      if (canonical) return { ...item, name: canonical.name, arguments: canonical.args };
       const verdict = this.evaluateCompletedItem(item);
       if (verdict.allowed) return item;
       blockedCallAudit(this.contributor.audit, {
