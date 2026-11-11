@@ -4,7 +4,7 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import { spawn } from 'node:child_process';
-import { museLooksIdle, refusalFor, startOrcaBridge, startWakeWatcher, unreadIn } from '../src/install/orca-bridge.js';
+import { museLooksIdle, museStuckPaste, refusalFor, startOrcaBridge, startWakeWatcher, unreadIn } from '../src/install/orca-bridge.js';
 
 const CLIENT = path.resolve(import.meta.dirname, '..', 'src', 'install', 'sandbox-bin', 'orca-client.cjs');
 
@@ -202,4 +202,26 @@ test('no notice while Muse is busy, or outside an Orca tab', async () => {
   startWakeWatcher({ env: {}, pollMs: 1, run: async () => { called = true; return ''; } })();
   await new Promise((r) => setTimeout(r, 10));
   assert.equal(called, false);
+});
+
+test('a large dispatched paste left unsent in an idle Muse prompt is recognized; drafts and busy screens are not', () => {
+  assert.equal(museStuckPaste('  Muse Code 1.4.15\n❯ [Pasted Content 5871 chars]\n───\n  muse-wonder-1.0 · medium'), 5871);
+  assert.equal(museStuckPaste('❯ [Pasted Content 240 chars]'), null, 'a short paste is a person drafting');
+  assert.equal(museStuckPaste('❯ [Pasted Content 5871 chars] and my note'), null, 'something typed after it');
+  assert.equal(museStuckPaste('◈ Thinking (esc to interrupt)\n❯ [Pasted Content 5871 chars]'), null, 'busy');
+  assert.equal(museStuckPaste('❯ '), null);
+});
+
+test('a stuck paste gets exactly one Enter, only after it is seen twice', async () => {
+  let screen = '❯ [Pasted Content 5871 chars]';
+  const { run, sent } = fakeOrca({ unread: () => [], screen: () => screen });
+  const stop = startWakeWatcher({ env: { ORCA_TERMINAL_HANDLE: 't' }, pollMs: 5, graceMs: 0, repeatMs: 0, run });
+  for (let i = 0; i < 60 && sent.length < 1; i += 1) await new Promise((r) => setTimeout(r, 10));
+  assert.deepEqual(sent, ['\r']);
+  await new Promise((r) => setTimeout(r, 60));
+  assert.deepEqual(sent, ['\r'], 'never a second Enter for the same paste');
+  screen = '◈ Thinking (esc to interrupt)\n❯ ';
+  await new Promise((r) => setTimeout(r, 30));
+  stop();
+  assert.deepEqual(sent, ['\r']);
 });
