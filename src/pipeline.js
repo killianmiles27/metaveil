@@ -194,7 +194,9 @@ function applyPostSpans(existing, normal, withheldRanges) {
       end: range.end,
       category: 'WITHHELD',
       replacement: range.replacement || WITHHELD_TEXT,
-      placeholder: WITHHELD_TEXT,
+      // The audit must name what the model actually saw: a Jev line withhold was being
+      // logged as "scanner unavailable", which hid what was really going on.
+      placeholder: range.replacement || WITHHELD_TEXT,
     });
   }
   for (const span of normal) {

@@ -27,6 +27,11 @@ export const DEFAULT_ALLOWED_TOOLS = Object.freeze([
   'update_goal',
   // Runs outside the sandbox, so evaluateFunctionCall limits it to public addresses.
   'web_fetch',
+  // Questions go only to the person at the keyboard.
+  'request_user_input',
+  // Muse runs searches through POST /muse-code/search on this proxy, whose body is redacted
+  // like a model request; without it the model scraped search engines through web_fetch.
+  'web_search',
 ]);
 
 export const DEFAULT_DENIED_SKILL_PATTERNS = Object.freeze([
@@ -327,6 +332,10 @@ export function normalizeConfig(raw, { configPath } = {}) {
       concurrency: jevConcurrency,
       chunkChars: jevChunkChars,
       overlapChars: jevOverlapChars,
+      // Validated (and clamped to at least `threshold`) by the detector.
+      withholdThreshold: jev.withholdThreshold,
+      contextWithholdThreshold: jev.contextWithholdThreshold,
+      contextMaxLines: jev.contextMaxLines,
     },
   };
 }

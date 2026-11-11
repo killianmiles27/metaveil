@@ -12,6 +12,37 @@ export function isContributorModeOn(headers) {
   return value !== '0';
 }
 
+// Tools whose arguments are text to store, show or search for, never a command to run on
+// this machine. Their paths are still confined; only the denied command patterns are skipped.
+// (A web_search query is redacted on its way out through /muse-code/search.)
+const CONTENT_ONLY_TOOLS = new Set([
+  'write_file', 'edit_file', 'write', 'edit', 'write_todos',
+  'request_user_input', 'report_progress', 'create_goal', 'update_goal', 'web_search',
+]);
+
+/**
+ * Muse writes long tool output to <home>\.local\share\muse\sessions\...\tool-outputs\ and reads
+ * it back with read_file. That is this session's own output, already scanned on its way to the
+ * model; refusing it cut off ordinary long build and test logs. Only read_file, only files
+ * inside a tool-outputs folder there, and still confined to that root (no .. or links out).
+ */
+export function museToolOutputRead(lowerName, argumentsText, context) {
+  if ((lowerName !== 'read_file' && lowerName !== 'read') || !context?.museSessionsRoot) return false;
+  const root = context.museSessionsRoot;
+  const verdict = checkFilePathArguments(argumentsText, { workspaceRoot: root, allowedRoots: [] });
+  if (!verdict.allowed) return false;
+  let parsed;
+  try {
+    parsed = JSON.parse(argumentsText);
+  } catch {
+    return false;
+  }
+  const paths = typeof parsed === 'string' ? [parsed] : Object.values(parsed || {}).filter((v) => typeof v === 'string');
+  const candidates = paths.filter((p) => /[\\/]/.test(p));
+  return candidates.length > 0 && candidates.every((p) => /[\\/]tool-outputs[\\/][^\\/]+$/i.test(p)
+    && p.toLowerCase().replace(/\//g, '\\').startsWith(root.toLowerCase()));
+}
+
 export function isToolAllowed(name, allowedTools) {
   if (typeof name !== 'string' || name.length === 0) return false;
   return allowedTools.some((pattern) => {
@@ -161,8 +192,13 @@ export function evaluateFunctionCall({ name: calledName, argumentsText, restored
       workspaceRoot: context.workspaceRoot,
       allowedRoots: context.allowedRoots || [],
     });
-    if (!verdict.allowed) return { ...verdict, toolName: name };
+    if (!verdict.allowed && !museToolOutputRead(lowerName, restoredArgs || rawArgs, context)) {
+      return { ...verdict, toolName: name };
+    }
   }
+  // Denied command patterns guard things that run. File contents and notes only get written:
+  // code that merely mentions "screenshot" was being refused, mid-edit, with no way forward.
+  if (CONTENT_ONLY_TOOLS.has(lowerName)) return { allowed: true, toolName: name };
   const haystacks = [argumentsText, restoredArgumentsText].filter((value) => typeof value === 'string');
   for (const haystack of haystacks) {
     const pattern = matchDeniedPattern(haystack, policy.deniedCommandPatterns);

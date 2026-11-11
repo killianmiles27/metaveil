@@ -227,10 +227,45 @@ test('desktop refusal explains coding can continue without a bypass', () => {
     assert.equal(decision(out), 'deny');
     const reason = out.hookSpecificOutput.permissionDecisionReason;
     assert.match(reason, /privacy refusal, not a shell failure/);
-    assert.match(reason, /project edits, builds and tests remain available/);
-    assert.match(reason, /Do not retry/);
-    assert.match(reason, /unverified/);
+    assert.match(reason, /do NOT retry/);
+    assert.match(reason, /do NOT stop to ask/);
+    // The user's standing fallback: a temporary Codex worker through Orca, sanitized report.
+    assert.match(reason, /Codex worker through Orca/);
+    assert.match(reason, /--agent codex --model gpt-6\.1-terra --effort medium/);
+    assert.match(reason, /ONLY a sanitized summary/);
+    assert.match(reason, /no personal names, user paths, screenshots/);
   } finally {
+    fs.rmSync(dir, { recursive: true, force: true });
+  }
+});
+
+test('a write or edit that would put a privacy marker into a file is refused, paths aside', () => {
+  const { dir, file } = tempConfig();
+  try {
+    const marked = runHook({ tool_name: 'edit_file', cwd: 'C:/work/ws', tool_input: { path: 'C:/work/ws/BUG_REVIEW.md', old_string: 'x', new_string: 'a\n[line withheld by metaveil: possible personal details. Do not try to read it another way]\nb' } }, file);
+    assert.equal(decision(marked), 'deny');
+    assert.match(marked.hookSpecificOutput.permissionDecisionReason, /METAVEIL_MARKER_WRITE/);
+    const written = runHook({ tool_name: 'write_file', cwd: 'C:/work/ws', tool_input: { path: 'C:/work/ws/a.txt', content: 'see .metaveil-blocked/path' } }, file);
+    assert.equal(decision(written), 'deny');
+    const clean = runHook({ tool_name: 'write_file', cwd: 'C:/work/ws', tool_input: { path: 'C:/work/ws/a.txt', content: 'take_screenshot() is a normal function name' } }, file);
+    assert.deepEqual(clean, {});
+  } finally {
+    fs.rmSync(dir, { recursive: true, force: true });
+  }
+});
+
+test('read_file of Muse\'s own tool-output spill files is allowed; other session files are not', () => {
+  const { dir, file } = tempConfig();
+  const prior = process.env.USERPROFILE;
+  try {
+    process.env.USERPROFILE = 'C:\\Users\\devuser';
+    const spill = 'C:\\Users\\devuser\\.local\\share\\muse\\sessions\\2026\\11\\10\\abc\\tool-outputs\\call_1.txt';
+    assert.deepEqual(runHook({ tool_name: 'read_file', cwd: 'C:/work/ws', tool_input: { path: spill } }, file), {});
+    const transcript = 'C:\\Users\\devuser\\.local\\share\\muse\\sessions\\2026\\11\\10\\abc\\session.jsonl';
+    assert.equal(decision(runHook({ tool_name: 'read_file', cwd: 'C:/work/ws', tool_input: { path: transcript } }, file)), 'deny');
+    assert.equal(decision(runHook({ tool_name: 'write_file', cwd: 'C:/work/ws', tool_input: { path: spill, content: 'x' } }, file)), 'deny');
+  } finally {
+    process.env.USERPROFILE = prior;
     fs.rmSync(dir, { recursive: true, force: true });
   }
 });

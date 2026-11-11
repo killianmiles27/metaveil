@@ -28,6 +28,9 @@ const HOP_BY_HOP = new Set([
 const ALLOWED_PATHS = [
   { method: 'GET', path: '/muse-code/models', kind: 'models' },
   { method: 'POST', path: '/v1/responses', kind: 'responses' },
+  // Muse's web_search tool. The query is redacted like any request body (identity values
+  // never leave as themselves); results come back as tool output and are scanned next turn.
+  { method: 'POST', path: '/muse-code/search', kind: 'search' },
 ];
 
 class BodyTooLargeError extends Error {
@@ -355,6 +358,8 @@ async function handleProxyRequest(ctx, req, res) {
       requestId,
       workspaceRoot: guard.workspaceRoot,
       allowedRoots: guard.allowedRoots,
+      // Muse spills long tool output here and reads it back (see museToolOutputRead).
+      museSessionsRoot: config.homeDir ? `${String(config.homeDir).replace(/[\\/]+$/, '')}\\.local\\share\\muse\\sessions` : null,
     };
   } else {
     const workspace = resolveRequestWorkspaceRoot(body, config);
@@ -382,7 +387,7 @@ async function handleProxyRequest(ctx, req, res) {
     if (contributorOn && Object.prototype.hasOwnProperty.call(body, 'tools')) {
       body.tools = filterTools(body.tools, contributorPolicy, audit, { requestId });
     }
-    if (contributorOn) body = addContributorGuidance(body);
+    if (contributorOn && allowed.kind === 'responses') body = addContributorGuidance(body);
     body = await redactor.redactBody(body, {
       requestId,
       contributor: contributorOn,
