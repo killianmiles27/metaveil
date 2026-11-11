@@ -125,6 +125,23 @@ export function museLooksIdle(screen) {
   return last !== undefined && last.replace(/^\s*\u276F/, '').trim() === '';
 }
 
+// Orca hands Muse a task by pasting it into the prompt box and pressing Enter
+// (promptInjectionMode "stdin-after-start", with no submit check or retry for Muse). Muse
+// folds a long paste into "[Pasted Content N chars]" and can drop the Enter that follows,
+// so the dispatched worker sits there until someone presses Enter. Only a large paste that
+// is alone in an idle prompt box counts; a person's short draft never matches.
+const STUCK_PASTE_MIN_CHARS = 1000;
+
+export function museStuckPaste(screen) {
+  const lines = String(screen || '').split(/\r?\n/).map((line) => line.trimEnd());
+  if (lines.some((line) => /esc to interrupt|Would you like to run/.test(line))) return null;
+  const prompts = lines.filter((line) => /^\s*❯/.test(line));
+  const last = prompts[prompts.length - 1];
+  const match = last && /^\s*❯\s*\[Pasted Content (\d+) chars\]\s*$/.exec(last);
+  if (!match || Number(match[1]) < STUCK_PASTE_MIN_CHARS) return null;
+  return Number(match[1]);
+}
+
 // check --peek returns only unread messages, and doesn't include a handled field.
 export function unreadIn(json) {
   try {
@@ -141,10 +158,32 @@ export function startWakeWatcher({ env = process.env, orcaCommand = 'orca.exe', 
   const seenAt = new Map();
   let lastNotice = 0;
   let busy = false;
+  // A stuck paste must be seen on two polls in a row (so Orca's own Enter had time), and
+  // each paste gets at most one Enter from here.
+  let pendingPaste = null;
+  let submittedPaste = null;
+  const submitStuckPaste = async () => {
+    const screen = await run(orcaCommand, ['terminal', 'read', '--terminal', handle, '--screen'], env);
+    const size = museStuckPaste(screen);
+    if (size === null) {
+      pendingPaste = null;
+      submittedPaste = null;
+      return;
+    }
+    if (size === submittedPaste) return;
+    if (pendingPaste !== size) {
+      pendingPaste = size;
+      return;
+    }
+    await run(orcaCommand, ['terminal', 'send', '--terminal', handle, '--text', '\r', '--json'], env);
+    submittedPaste = size;
+    pendingPaste = null;
+  };
   const tick = async () => {
     if (busy) return;
     busy = true;
     try {
+      await submitStuckPaste();
       const reply = await run(orcaCommand, ['orchestration', 'check', '--terminal', handle, '--peek', '--json'], env);
       const unread = unreadIn(reply);
       for (const id of [...seenAt.keys()]) if (!unread.some((m) => m.id === id)) seenAt.delete(id);
