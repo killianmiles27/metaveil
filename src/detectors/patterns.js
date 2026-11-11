@@ -53,6 +53,12 @@ function placeholderValue(value) {
   return false;
 }
 
+// File extensions that are not top-level domains (extensions that are ccTLDs, such as .py, .rs
+// or .md, are deliberately absent).
+const NOT_A_TLD = new Set(['png', 'jpg', 'jpeg', 'gif', 'svg', 'webp', 'ico', 'bmp', 'json', 'js', 'mjs', 'cjs',
+  'css', 'html', 'htm', 'txt', 'toml', 'yaml', 'yml', 'lock', 'woff', 'woff2', 'ttf', 'otf', 'pdf', 'zip', 'mp4', 'wav', 'mp3']);
+const RESERVED_TLDS = new Set(['invalid', 'test', 'example', 'localhost']);
+
 function emailDetector() {
   return {
     name: 'emails',
@@ -64,6 +70,11 @@ function emailDetector() {
       while ((match = re.exec(text)) !== null) {
         const domain = match[0].slice(match[0].lastIndexOf('@') + 1).toLowerCase();
         if (domain === 'example.com' || domain === 'example.org' || domain === 'example.net') continue;
+        // Asset names such as appicon-60x60@3x.png are not addresses, and RFC 2606/6761
+        // reserved TLDs can never be real ones. The identity detector still catches the
+        // user's own addresses wherever they appear.
+        const tld = domain.slice(domain.lastIndexOf('.') + 1);
+        if (NOT_A_TLD.has(tld) || RESERVED_TLDS.has(tld)) continue;
         spans.push({ start: match.index, end: match.index + match[0].length, category: 'EMAIL', value: match[0] });
       }
       return spans;
