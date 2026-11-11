@@ -79,3 +79,11 @@ test('POST /muse-code/search is forwarded redacted, without guidance, for a veri
   assert.ok(!body.includes(CONTRIBUTOR_GUIDANCE));
   assert.ok(!('instructions' in JSON.parse(body)));
 });
+
+test('asset names like icon@2x.png and reserved-TLD addresses are not emails; real ones still are', async () => {
+  const { createPatternDetectors } = await import('../src/detectors/patterns.js');
+  const emails = createPatternDetectors().find((d) => d.name === 'emails');
+  const found = (text) => emails.scan(text).map((s) => s.value);
+  assert.deepEqual(found('icons: appicon-60x60@3x.png, logo@2x.webp, bench@example.invalid, ci@host.test'), []);
+  assert.deepEqual(found('mail jane.roe@mailhost.co or j@site.io'), ['jane.roe@mailhost.co', 'j@site.io']);
+});
