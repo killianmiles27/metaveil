@@ -19,6 +19,9 @@ export const DEFAULT_ALLOWED_TOOLS = Object.freeze([
   'submit_reminder_decision',
   'snooze_reminder',
   'report_progress',
+  // Muse's approval judge returns a structured verdict through this tool. It
+  // executes nothing; filtering it stalls even ordinary sandboxed coding calls.
+  'submit_approval_assessment',
   'get_goal',
   'create_goal',
   'update_goal',

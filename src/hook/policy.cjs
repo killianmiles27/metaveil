@@ -194,12 +194,13 @@ function skillAllowed(name, config) {
     .some((entry) => [trimmed.toLowerCase(), bare].includes(String(entry).trim().toLowerCase()));
 }
 
-const BLOCKED_PREFIX = /^\.metaveil-blocked[\\/]([a-z-]+)$/;
+const BLOCKED_PREFIX = /^(?:\.[\\/])?\.metaveil-blocked[\\/]([a-z-]+)(?:[\\/].*)?$/i;
 const BLOCKED_REASONS = {
-  path: 'that path is outside this project, and Contributor mode keeps file tools inside it. Work within the project.',
-  tool: 'that tool is not available in Contributor mode. Use another approach.',
-  skill: 'that skill is not available in Contributor mode. Continue without it.',
-  command: 'that command is not allowed in Contributor mode. Use another approach.',
+  path: '[METAVEIL_PATH_DENIED] that path is outside this project, and Contributor mode keeps file tools inside it. This refusal marker is not a file or a shell failure. Work within the project; do not reconstruct or reach the denied path through another tool. Continue independent permitted edits, tests and builds.',
+  tool: '[METAVEIL_TOOL_DENIED] that tool is not available in Contributor mode. This refusal marker is not a file or a shell failure. Do not retry or route the operation through scripts, terminals or workers. Continue independent work using the tools actually available.',
+  skill: '[METAVEIL_SKILL_DENIED] that skill is not available in Contributor mode. This refusal marker is not a file or a shell failure. Continue without it; do not fetch a denied skill through another tool.',
+  command: 'a capability in the preceding call was blocked by the Contributor privacy policy; this is not a shell failure. Do not read or retry .metaveil-blocked paths: they are refusal markers, not files. Continue with ordinary sandboxed project edits, builds and tests. Do not bypass the restriction through scripts, another terminal or a worker. If a check needs a restricted capability, report that check as unverified and continue independent work.',
+  desktop: 'desktop/GUI capture and control are unavailable in Contributor mode because they can expose personal content. This is a privacy refusal, not a shell failure. Do not retry this marker or route the operation through scripts, another terminal or a worker. Ordinary sandboxed project edits, builds and tests remain available. Finish independent coding work and report GUI-only checks as unverified.',
 };
 
 // Muse only loads this hook on Contributor runs (the launcher passes it per run),
@@ -209,7 +210,7 @@ function decide(payload, config) {
   if (!tool) return { allow: true };
   const input = (payload && (payload.tool_input || payload.toolInput)) || {};
   const blocked = typeof input.path === 'string' ? BLOCKED_PREFIX.exec(input.path) : null;
-  if (blocked) return { allow: false, reason: BLOCKED_REASONS[blocked[1]] || BLOCKED_REASONS.tool };
+  if (blocked) return { allow: false, reason: BLOCKED_REASONS[blocked[1].toLowerCase()] || BLOCKED_REASONS.tool };
   const rawCwd = payload && typeof payload.cwd === 'string' ? normalize(payload.cwd) : '';
   const payloadCwd = rawCwd && isAbsoluteWindows(rawCwd) ? rawCwd : '';
   const configRoot = normalize(config.workspaceRoot || '');

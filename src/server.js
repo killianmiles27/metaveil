@@ -11,6 +11,7 @@ import { createRedactor } from './redact.js';
 import { createRestorer, restoreResponseObject } from './restore.js';
 import { SseTransformer } from './sse.js';
 import { isContributorModeOn, filterTools, evaluateFunctionCall, blockedCallAudit } from './contributor.js';
+import { addContributorGuidance } from './guidance.js';
 import { buildContributorGuard, resolveRequestWorkspaceRoot } from './confinement.js';
 
 const HOP_BY_HOP = new Set([
@@ -381,6 +382,7 @@ async function handleProxyRequest(ctx, req, res) {
     if (contributorOn && Object.prototype.hasOwnProperty.call(body, 'tools')) {
       body.tools = filterTools(body.tools, contributorPolicy, audit, { requestId });
     }
+    if (contributorOn) body = addContributorGuidance(body);
     body = await redactor.redactBody(body, {
       requestId,
       contributor: contributorOn,

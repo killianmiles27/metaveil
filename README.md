@@ -8,6 +8,10 @@ still receive real paths and names.
 It is deliberately small: plain ESM JavaScript, Node 20+ (developed against Node 26), no
 runtime dependencies, tests with `node --test`.
 
+Contributor-mode operating guidance is injected automatically after sandbox verification.
+It explains intentional refusals and how to continue permitted work without weakening
+privacy gates. See [compatibility guidance and loopback verification](docs/contributor-guidance.md).
+
 > **metaveil is a mitigation, not a guarantee.** Detection is heuristic and can miss
 > things. Treat it as one layer of a local privacy setup, not as a proof that no personal
 > data ever leaves the machine. See [Known limitations](#known-limitations).
@@ -320,7 +324,10 @@ When ON:
    `read_file`, `search`, `write_file`, `edit_file`, `powershell`, `write_todos`,
    `subagent_*`, `work_*`, `monitor`, `workflow`, `read_skill`. Everything else is removed
    from `tools`, including nested namespace tools, MCP tools, plugin tools, browser tools
-   and computer-use tools. Each strip is audited by tool name/type only.
+   and computer-use tools. Each strip is audited by tool name/type only. Muse's internal
+   bookkeeping tools, including `submit_approval_assessment`, are also allowed. The latter
+   returns the approval judge's verdict; it does not run the command being assessed.
+   An explicit `allowedTools` override must include it or ordinary coding calls can stall.
 3. **Skill catalog filtering.** `<skill id="...">...</skill>` blocks whose id or
    description matches `deniedSkillPatterns` are removed before the text is scanned and
    forwarded. Defaults include computer-use, browser, Gmail, Drive, Calendar, password and
@@ -333,8 +340,12 @@ When ON:
    normalized. Relative `..` escapes are denied; 8.3 short names outside the workspace are
    denied. A denied call is discarded, audited with the tool name and category only (never
    the path), and:
-   - streaming: the stream ends with an SSE `error` event; no function-call event or
-     argument bytes are sent to the client;
+   - streaming: the rejected call is replaced with a `read_file` call targeting a fixed
+     `.metaveil-blocked/<reason>` marker. The hook denies that marker with an explanation;
+     none of the original command arguments reach the client. Markers are not files and
+     must not be retried. Desktop capture/control refusals explicitly say coding can
+     continue and GUI-only checks should be reported as unverified. Do not route a denied
+     operation through scripts, other terminals or workers;
    - non-streaming: the response is replaced by a local `502` error body.
    Each HTTP request (including a separately-issued subagent request) gets its own
    workspace-root check, so a subagent cannot inherit a wider root.
