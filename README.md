@@ -114,7 +114,9 @@ See `config.example.json` for a complete example with synthetic values.
 | `jev.allowedModels` | Exact ids this config may use (default: just `jev.model`). Every entry must match `typesafe/jev-*` with no router/auto/free/~. |
 | `jev.providers` | Exact accepted response `provider` names (default `["TypeSafe"]`). Any other provider value is a scanner failure. |
 | `jev.apiKeyEnv` | Environment variable holding the API key (default `OPENROUTER_API_KEY`). Never put the key in config. |
-| `jev.threshold` | Probability at or above which text is narrowed and withheld (default `0.5`). Answers below it are clean. |
+| `jev.threshold` | Probability at or above which text is narrowed (default `0.5`). Answers below it are clean. |
+| `jev.withholdThreshold` | Probability at or above which a narrowed line or window is withheld (default `0.7`, never below `threshold`). |
+| `jev.contextWithholdThreshold`, `jev.contextMaxLines` | A block flagged only as a whole is withheld when `p` is at least this (default `0.85`) and it has at most this many lines (default `20`). |
 | `jev.maxCallsPerChunk` | Maximum decision calls spent narrowing one chunk (default `32`). Beyond it, remaining flagged text is withheld instead of sent. |
 | `jev.timeoutMs` | Per-request timeout (default `15000`). |
 | `jev.cachePath` | Persistent SHA-256 result cache (default: `jev-cache.json` next to `mapPath`, normally `%LOCALAPPDATA%\metaveil\jev-cache.json`). It stores hashes and probabilities only. |
@@ -258,9 +260,15 @@ is narrowed before anything is forwarded:
 1. Split the flagged text in half on line boundaries and ask about each half, recursing
    until a single line. A single line over 400 characters is split into overlapping
    300-character windows, down to one window.
-2. A parent is flagged but both halves are clean means the signal depended on context, so
-   the whole parent is withheld. It is never treated as clean.
-3. Replace only the smallest flagged unit with
+2. A parent is flagged but both halves are clean means the signal is spread over several
+   lines, or is noise. The parent is withheld only when `p >= jev.contextWithholdThreshold`
+   (default `0.85`) and it is at most `jev.contextMaxLines` (default `20`) lines long.
+   Otherwise it passes and is audited as `passed_uncertain` (hash, `p`, line count only).
+   On real Muse traffic these flags had a median `p` of 0.57 on blocks of up to 8,000
+   characters, and withholding them hid whole files from the model.
+3. A single line or window is withheld only when `p >= jev.withholdThreshold` (default
+   `0.7`; never below `jev.threshold`). Below it, it passes as `passed_uncertain`.
+   Replace only the smallest flagged unit with
    `[line withheld by metaveil: possible personal details. Do not try to read it another way]`. All other bytes are kept
    unchanged, so surrounding code survives.
 4. At most `jev.maxCallsPerChunk` (default `32`) decisions are spent per chunk. If the
@@ -508,9 +516,13 @@ that is not labelled as a version can be redacted as an IP.
   restore, tokenize or selectively edit the withheld bytes; a whole line/window is lost.
   A value split beyond the 8,000/200 overlap can be missed. Thresholds and chunk sizes are
   configurable.
-- **Context-only flags withhold the whole parent.** If a parent scores high but both halves
-  score low, the detector assumes context mattered and withholds the parent rather than
-  treating it as clean. Exhausting `maxCallsPerChunk` also withholds remaining flagged text.
+- **Context-only flags pass unless Jev is very sure.** If a parent scores high but both halves
+  score low, the parent is withheld only when it is short and `p >= 0.85`; otherwise it is
+  sent. Personal details that only show up in context across many lines, and are not on the
+  identity list, can therefore pass. Lines scoring between `threshold` and
+  `withholdThreshold` also pass. This trades a little recall for a model that can see the
+  files it edits; Layer 1 (identity list, paths, emails, secrets) is unaffected. Exhausting
+  `maxCallsPerChunk` still withholds remaining flagged text.
 - **Jev failure handling is per enabled/configured run.** If Jev is enabled and unavailable
   (missing key, timeout, non-200, malformed/wrong-schema reply, refusal, wrong provider),
   `withhold` replaces the failed chunk and `block` returns 5xx with zero upstream requests.

@@ -11,6 +11,9 @@ export const JEV_ENDPOINT = '/api/alpha/decisions';
 const DEFAULT_MODEL = 'typesafe/jev-1.14';
 const DEFAULT_PROVIDERS = ['TypeSafe'];
 const DEFAULT_THRESHOLD = 0.5;
+const DEFAULT_WITHHOLD_THRESHOLD = 0.7;
+const DEFAULT_CONTEXT_WITHHOLD_THRESHOLD = 0.85;
+const DEFAULT_CONTEXT_MAX_LINES = 20;
 const DEFAULT_MAX_CALLS_PER_CHUNK = 32;
 const SINGLE_LINE_SPLIT_CHARS = 400;
 const WINDOW_CHARS = 300;
@@ -254,6 +257,15 @@ export function createJevDetector({
   const threshold = Number.isFinite(jev.threshold) && jev.threshold >= 0 && jev.threshold <= 1
     ? jev.threshold
     : DEFAULT_THRESHOLD;
+  // `threshold` decides what gets narrowed down; these decide what is finally withheld.
+  const unitScore = (value, fallback) => (Number.isFinite(value) && value >= 0 && value <= 1
+    ? Math.max(value, threshold)
+    : Math.max(fallback, threshold));
+  const withholdThreshold = unitScore(jev.withholdThreshold, DEFAULT_WITHHOLD_THRESHOLD);
+  const contextWithholdThreshold = unitScore(jev.contextWithholdThreshold, DEFAULT_CONTEXT_WITHHOLD_THRESHOLD);
+  const contextMaxLines = Number.isInteger(jev.contextMaxLines) && jev.contextMaxLines >= 1
+    ? jev.contextMaxLines
+    : DEFAULT_CONTEXT_MAX_LINES;
   const maxCallsPerChunk = Number.isInteger(jev.maxCallsPerChunk) && jev.maxCallsPerChunk >= 1
     ? jev.maxCallsPerChunk
     : DEFAULT_MAX_CALLS_PER_CHUNK;
@@ -536,6 +548,20 @@ export function createJevDetector({
     return { p: result.p, cached: false, cost: result.cost };
   }
 
+  function auditUncertain(ctx, chunkHash, unit, p) {
+    ctx?.audit?.record({
+      requestId: ctx?.requestId,
+      phase: 'request',
+      action: 'passed_uncertain',
+      category: 'JEV',
+      detector: 'jev',
+      chunkHash,
+      p,
+      lineCount: countLines(unit.text),
+      field: ctx?.field,
+    });
+  }
+
   function withheldSpan(unit, p, reason, ctx, chunkHash) {
     auditWithheld(ctx, chunkHash, unit, p, reason);
     return {
@@ -547,10 +573,29 @@ export function createJevDetector({
     };
   }
 
+  // A unit flagged as a whole but in neither half: the signal is spread over several lines
+  // (a name on one line, an address on the next) or it is noise. On Muse's real traffic it was
+  // nearly always noise: median p 0.57 on blocks of up to 8,000 characters, which removed whole
+  // files from the model's view. Such a unit is withheld only when Jev is very sure and the
+  // unit is short; otherwise it passes, and Layer 1 (identity list, paths, secrets) still applies.
+  function contextFallback(unit, p, ctx, chunkHash) {
+    if (p >= contextWithholdThreshold && countLines(unit.text) <= contextMaxLines) {
+      return [withheldSpan(unit, p, 'context', ctx, chunkHash)];
+    }
+    auditUncertain(ctx, chunkHash, unit, p);
+    return [];
+  }
+
+  function lineVerdict(unit, p, reason, ctx, chunkHash) {
+    if (p >= withholdThreshold) return [withheldSpan(unit, p, reason, ctx, chunkHash)];
+    auditUncertain(ctx, chunkHash, unit, p);
+    return [];
+  }
+
   async function narrow(text, unit, p, state, ctx, chunkHash) {
     if (!unit.text.includes('\n')) {
       if (unit.text.length <= SINGLE_LINE_SPLIT_CHARS) {
-        return [withheldSpan(unit, p, 'line', ctx, chunkHash)];
+        return lineVerdict(unit, p, 'line', ctx, chunkHash);
       }
       const windows = splitWindows(text, unit);
       const flagged = [];
@@ -561,10 +606,10 @@ export function createJevDetector({
           budget = true;
           break;
         }
-        if (result.p >= threshold) flagged.push({ unit: window, p: result.p });
+        if (result.p >= withholdThreshold) flagged.push({ unit: window, p: result.p });
       }
       if (budget) return [withheldSpan(unit, p, 'budget', ctx, chunkHash)];
-      if (flagged.length === 0) return [withheldSpan(unit, p, 'context', ctx, chunkHash)];
+      if (flagged.length === 0) return contextFallback(unit, p, ctx, chunkHash);
       const unioned = unionRanges(flagged.map((entry) => ({
         start: entry.unit.start,
         end: entry.unit.end,
@@ -578,7 +623,7 @@ export function createJevDetector({
     }
 
     const parts = splitUnit(text, unit);
-    if (!parts) return [withheldSpan(unit, p, 'line', ctx, chunkHash)];
+    if (!parts) return lineVerdict(unit, p, 'line', ctx, chunkHash);
     const left = await ask(parts[0], state, ctx, chunkHash);
     if (left.budget) return [withheldSpan(unit, p, 'budget', ctx, chunkHash)];
     const right = await ask(parts[1], state, ctx, chunkHash);
@@ -587,7 +632,7 @@ export function createJevDetector({
     const leftFlagged = left.p >= threshold;
     const rightFlagged = right.p >= threshold;
     if (!leftFlagged && !rightFlagged) {
-      return [withheldSpan(unit, p, 'context', ctx, chunkHash)];
+      return contextFallback(unit, p, ctx, chunkHash);
     }
     const spans = [];
     if (leftFlagged) spans.push(...await narrow(text, parts[0], left.p, state, ctx, chunkHash));

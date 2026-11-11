@@ -564,6 +564,61 @@ test('a context-only flag withholds the whole parent, never treated as clean', a
   assert.equal(jev.requests.length, 3);
 });
 
+test('a borderline context-only flag on a large block passes and is audited, not withheld', async (t) => {
+  const { scan, audit } = await setupDetector(t, {
+    handler: (req, res, record) => {
+      const state = requestBody(record).state;
+      const contextOnly = state.includes('alpha-only') && state.includes('beta-only');
+      sendDecision(res, contextOnly ? 0.57 : 0.01);
+    },
+  });
+  const lines = codeLines(100);
+  lines[3] = 'alpha-only';
+  lines[85] = 'beta-only';
+  const text = lines.join('\n');
+  assert.deepEqual(await scan(text), []);
+  assert.equal(audit.entries.filter((entry) => entry.category === 'JEV_WITHHELD').length, 0);
+  const uncertain = audit.entries.filter((entry) => entry.action === 'passed_uncertain');
+  assert.equal(uncertain.length, 1);
+  assert.equal(uncertain[0].p, 0.57);
+  assert.ok(!JSON.stringify(uncertain).includes('alpha-only'));
+});
+
+test('a very confident context-only flag on a large block still passes: only short blocks are withheld whole', async (t) => {
+  const { scan } = await setupDetector(t, {
+    handler: (req, res, record) => {
+      const state = requestBody(record).state;
+      sendDecision(res, state.includes('alpha-only') && state.includes('beta-only') ? 0.95 : 0.01);
+    },
+  });
+  const lines = codeLines(100);
+  lines[3] = 'alpha-only';
+  lines[85] = 'beta-only';
+  assert.deepEqual(await scan(lines.join('\n')), []);
+});
+
+test('a single line is withheld at 0.7 or above and passes below it', async (t) => {
+  for (const [score, expected] of [[0.6, 0], [0.69, 0], [0.7, 1], [0.93, 1]]) {
+    const { scan } = await setupDetector(t, {
+      handler: (req, res, record) => {
+        sendDecision(res, requestBody(record).state.includes(MARKER) ? score : 0.02);
+      },
+    });
+    const spans = await scan(codeLines(40, { markerAt: 20 }).join('\n'));
+    assert.equal(spans.length, expected, `p=${score}`);
+  }
+});
+
+test('withholdThreshold is configurable but never below the narrowing threshold', async (t) => {
+  const { scan } = await setupDetector(t, {
+    jevConfig: { withholdThreshold: 0.2 },
+    handler: (req, res, record) => {
+      sendDecision(res, requestBody(record).state.includes(MARKER) ? 0.45 : 0.02);
+    },
+  });
+  assert.deepEqual(await scan(codeLines(40, { markerAt: 20 }).join('\n')), []);
+});
+
 test('a long single line narrows to one 300-character window', async (t) => {
   const { scan } = await setupDetector(t, {
     handler: (req, res, record) => {
